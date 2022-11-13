@@ -34,16 +34,37 @@ def main():
     # distancia euclidea solo con las x 
     
 
-    x_test="x_test"
-    true_labels="true_labels"
+ 
+    true_labels = test.pop('mpg').tolist() # saco la columna mpg y la paso a lista
+
+    acc = [] 
 
     # Predecimos el conjunto de test
-    predicted_labels
-    # Mostramos por pantalla el Accuracy por ejemplo
-    print("Accuracy conseguido:")
-    print(accuracy(true_labels, predicted_labels))
+
+    for K in range (1,21):
+        pred_labels = []
+        for i in range(len(parte_test)):
+            pred_labels.append(knn(parte_test.iloc[i], parte_train, K))
+
+
+        test['mpg'] = true_labels
+        test['pred_mpg'] = pred_labels
+        print("Este es el dataset de test con las predicciones")
+        print(test)
+        test.pop('mpg')
+        test.pop('pred_mpg')
+        
+        # Mostramos por pantalla el Accuracy por ejemplo
+        print("Accuracy: ", accuracy(true_labels, pred_labels))
+        acc.append(accuracy(true_labels, pred_labels))
+
+
+
+       
+    
 
     # Algun grafico? Libreria matplotlib.pyplot
+    plt.plot(range(1,21), acc)
     return(0)
 
 # FUNCIONES de preprocesado
@@ -66,6 +87,7 @@ def splitTrainTest(data, percentajeTrain):
     np.random.rand(len(mtcars)) -> mascara >0.75
     """
     mk = np.random.rand(len(mtcars_normalizado))
+    mascara = mk > 0.75
 
     train_path > percentajeTrain
     test_path < 1-percentajeTrain
@@ -95,12 +117,24 @@ def knn(newx, data, K):
 
     distances = []
 
+
     for i in data_list:
         distances.append(euclideanDistance2points(i, newx_list))
 
     distances_order = sorted(distances)
+    neighbors = []
 
-    
+    for i in range(K):
+        neighbors.append(distances_orde.index(i))
+
+    labels = {}
+    for j in neighbors:
+        if str(data.loc[data.index[x]]['mpg']) in labels:
+            labels[str(data.loc[data.index[x]]['mpg'])] += 1
+        else:
+            labels[str(data.loc[data.index[x]]['mpg'])] = 1
+
+    new_label = float(max(labels, key=labels.get)) 
 
     return(newlabel)
 
@@ -113,7 +147,12 @@ def euclideanDistance2points(x,y):
 
 # FUNCION accuracy
 def accuracy(true, pred):
-    return()
+    cont = 0 
+    for (t,p) in zip(true, pred):
+        if t == p:
+            cont += 1
+
+    return cont/len(true)
 
 if __name__ == '__main__':
     np.random.seed(25) #pone una semilla (como en weka)
