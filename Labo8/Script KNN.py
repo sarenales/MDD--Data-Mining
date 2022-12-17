@@ -41,7 +41,7 @@ def main():
     parte_test, parte_train = splitTrainTest(mtcars_normalizado, 0.75)
     
     # Separamos las labels del Test. Es como si no nos las dieran!!
-    testT = parte_test.loc[:, parte_test.columns != 'mpg'] # saco la columna mpg y la paso a lista
+    testT = parte_test.loc[:, parte_test.columns != 'mpg'] # saco la columna mpg
     testR = parte_test.loc[:, parte_test.columns == 'mpg']
 
     acc = [] 
@@ -56,18 +56,21 @@ def main():
     for i in range(len(testT)):
         estimation = knn(testT.iloc[i,:], parte_train, 3)
         predicted_labes +=1
-        print("Numero de Prueba: ", i , "Clase ESTIMADA -->", estimation, "Clase REAL --> ", testR.iloc[i,0], "\n")
+        print("Numero de Prueba: ", i , "CM -->", estimation, "Clase REAL --> ", testR.iloc[i,0], "\n")
         if estimation == testR.iloc[i,0]:
             true_labels +=1
             
     # hacemos un mini resumen de lo conseguido
 
-    print("Accuracy conseguido:", accuracy(true_labels, predicted_labes))
-            
-
-
+    # ACCURACY KNN
+    print("Accuracy KNN:", accuracy(true_labels, predicted_labes))
+    
+    # 5 - FOLD CROSS-VALIDATION
+    print("Accuracy total 5-fold Cross-validation ", kFoldCV(mtcars_normalizado,5))
+    
+    
     # Algun grafico? Libreria matplotlib.pyplot
-   # plt.plot(range(1,21), acc)
+    # grafico(mtcars)
     return(0)
 
 # FUNCIONES de preprocesado
@@ -86,7 +89,7 @@ def splitTrainTest(data, percentajeTrain):
     - crear vector T,F
     - luego lo indexo
 
-    numero aleatorio entre 0y1
+    numero aleatorio entre 0 y 1
     np.random.rand(len(mtcars)) -> mascara >0.75
     """
     mk = np.random.rand(len(data))
@@ -102,15 +105,48 @@ def splitTrainTest(data, percentajeTrain):
     return (train_path, test_path)
 
 # FUNCIONES de visualizacion
-# def kFoldCV(data, K):
-#     """
-#     Takes a pandas dataframe and the number of folds of the CV
-#     YOU CAN USE THE sklearn KFold function here
-#     How to: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
-#     """
-#     kf = KFold(n_splits = K, shuffle = True, random_state = 2)
-#     result = list(kf.split(data))
-#     print(result)
+def kFoldCV(data, K):
+    """
+    Takes a pandas dataframe and the number of folds of the CV
+    YOU CAN USE THE sklearn KFold function here
+    How to: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
+    """
+    # Dividimos las capas aleatoriamente el dataset
+    
+    # cogemos un numero al azar 
+    a = list(range(K))
+    np.random.shuffle(a)
+    
+    # repetimos k veces cada vez con una capa de testeo distito.
+    accuracy_total=0
+    for k in range(K):
+        i_test = []
+        i_train = []
+        print("Fold number: ", k, ":\n")
+        for i in range(len(a)):
+            # esta en test 
+            if a[i] == k: i_test.append(i)
+            else: i_train.append(i)
+            
+        # guardamos para evaluar
+        test = data.iloc[i_test,:]
+        testT = test.loc[:, test.columns != 'mpg'] 
+        testR = test.loc[:, test.columns == 'mpg']
+        
+        
+        cont = 0
+        TP =0
+        for j in range(len(testT)):
+            predicted = knn(testT.iloc[j,:], data.iloc[i_train,:], 3)
+            cont +=1
+            print("De la capa ",k, " el caso :", j, ";CM-->", predicted, "; C real",testR.iloc[j,0], "\n" )
+            if predicted == testR.iloc[j,0]: TP+=1
+        
+        print("Accuracy de la capa ",k,": ", accuracy(TP,cont) )
+        accuracy_total +=accuracy(TP,cont)
+        
+        
+    return(accuracy_total/K)
 
 # FUNCION modelo prediccion
 def knn(newx, data, K):
@@ -178,6 +214,8 @@ def euclideanDistance2points(x,y):
 # FUNCION accuracy
 def accuracy(true, pred):
     return (true/pred)
+
+
 
 if __name__ == '__main__':
     np.random.seed(25) #pone una semilla (como en weka)
