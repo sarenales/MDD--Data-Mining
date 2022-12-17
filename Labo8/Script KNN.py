@@ -6,7 +6,8 @@ import statistics as st
 import matplotlib.pyplot as plt  # graficos, como el plot de R
 import numpy as np  # posibilita hacer arrays
 import pandas as pd  # dataframes, los datos de una matrix iguales.
-from sklearn.model_selection import KFold  # kflod validation
+
+# from sklearn.model_selection import KFold  # kflod validation
  # y para cada columna q sea d un tipo, hay q importarlo. (R, mathlab..)
 
 #pruebas
@@ -35,7 +36,7 @@ def main():
     
 
  
-    true_labels = test.pop('mpg').tolist() # saco la columna mpg y la paso a lista
+    true_labels = parte_test.pop('mpg').tolist() # saco la columna mpg y la paso a lista
 
     acc = [] 
 
@@ -47,12 +48,12 @@ def main():
             pred_labels.append(knn(parte_test.iloc[i], parte_train, K))
 
 
-        test['mpg'] = true_labels
-        test['pred_mpg'] = pred_labels
+        parte_test['mpg'] = true_labels
+        parte_test['pred_mpg'] = pred_labels
         print("Este es el dataset de test con las predicciones")
-        print(test)
-        test.pop('mpg')
-        test.pop('pred_mpg')
+        print(parte_test)
+        parte_test.pop('mpg')
+        parte_test.pop('pred_mpg')
         
         # Mostramos por pantalla el Accuracy por ejemplo
         print("Accuracy: ", accuracy(true_labels, pred_labels))
@@ -86,23 +87,28 @@ def splitTrainTest(data, percentajeTrain):
     numero aleatorio entre 0y1
     np.random.rand(len(mtcars)) -> mascara >0.75
     """
-    mk = np.random.rand(len(mtcars_normalizado))
+    mk = np.random.rand(len(data))
     mascara = mk > 0.75
 
-    train_path > percentajeTrain
-    test_path < 1-percentajeTrain
+    test_path = data.loc[mascara]
+    train_path = data.loc[~mascara]
+    print("TRAIN")
+    print(train_path)
+    print("TEST")
+    print(test_path)
 
-    return train_path, test_path
+    return (train_path, test_path)
 
 # FUNCIONES de visualizacion
-def kFoldCV(data, K):
-    """
-    Takes a pandas dataframe and the number of folds of the CV
-    YOU CAN USE THE sklearn KFold function here
-    How to: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
-    """
-
-    return()
+# def kFoldCV(data, K):
+#     """
+#     Takes a pandas dataframe and the number of folds of the CV
+#     YOU CAN USE THE sklearn KFold function here
+#     How to: https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.KFold.html
+#     """
+#     kf = KFold(n_splits = K, shuffle = True, random_state = 2)
+#     result = list(kf.split(data))
+#     print(result)
 
 # FUNCION modelo prediccion
 def knn(newx, data, K):
@@ -125,16 +131,16 @@ def knn(newx, data, K):
     neighbors = []
 
     for i in range(K):
-        neighbors.append(distances_orde.index(i))
+        neighbors.append(distances_order.index(i))
 
     labels = {}
     for j in neighbors:
-        if str(data.loc[data.index[x]]['mpg']) in labels:
-            labels[str(data.loc[data.index[x]]['mpg'])] += 1
+        if str(data.loc[data.index[i]]['mpg']) in labels:
+            labels[str(data.loc[data.index[i]]['mpg'])] += 1
         else:
-            labels[str(data.loc[data.index[x]]['mpg'])] = 1
+            labels[str(data.loc[data.index[i]]['mpg'])] = 1
 
-    new_label = float(max(labels, key=labels.get)) 
+    newlabel = float(max(labels, key=labels.get)) 
 
     return(newlabel)
 
@@ -152,7 +158,7 @@ def accuracy(true, pred):
         if t == p:
             cont += 1
 
-    return cont/len(true)
+    return (cont/len(true))
 
 if __name__ == '__main__':
     np.random.seed(25) #pone una semilla (como en weka)
