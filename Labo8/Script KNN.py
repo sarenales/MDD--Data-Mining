@@ -4,9 +4,13 @@ import math
 import statistics as st
 
 import matplotlib.pyplot as plt  # graficos, como el plot de R
+from matplotlib.ticker import MaxNLocator
+
 import numpy as np  # posibilita hacer arrays
 import pandas as pd  # dataframes, los datos de una matrix iguales.
 
+
+import random
 # from sklearn.model_selection import KFold  # kflod validation
  # y para cada columna q sea d un tipo, hay q importarlo. (R, mathlab..)
 
@@ -58,10 +62,6 @@ def main():
         # Mostramos por pantalla el Accuracy por ejemplo
         print("Accuracy: ", accuracy(true_labels, pred_labels))
         acc.append(accuracy(true_labels, pred_labels))
-
-
-
-       
     
 
     # Algun grafico? Libreria matplotlib.pyplot
@@ -130,7 +130,7 @@ def knn(newx, data, K):
     distances_order = sorted(distances)
     neighbors = []
 
-    for i in range(K):
+    for i in range(0,K):
         neighbors.append(distances_order.index(i))
 
     labels = {}
@@ -149,7 +149,11 @@ def euclideanDistance2points(x,y):
     Takes 2 matrix - Not pandas dataframe!
     """
     # directamente entre matrices. todo vector se puede operar uno con otro.
-    return (math.sqrt(x-y))**2
+    # ((math.sqrt((x-y)**2)))
+    s = 0
+    for(i,j) in zip(x,y):
+        s += (i-j)**2 
+    return (math.sqrt(s))
 
 # FUNCION accuracy
 def accuracy(true, pred):
