@@ -9,7 +9,7 @@ from matplotlib.ticker import MaxNLocator
 import numpy as np  # posibilita hacer arrays
 import pandas as pd  # dataframes, los datos de una matrix iguales.
 
-
+from pylab import rcParams
 import random
 # from sklearn.model_selection import KFold  # kflod validation
  # y para cada columna q sea d un tipo, hay q importarlo. (R, mathlab..)
@@ -18,54 +18,56 @@ import random
 def main():
     path_dataset = "mtcars.csv" # Escoged bien la ruta!!
     mtcars = pd.read_csv(path_dataset) # Leemos el csv
+    
     # Discretizamos la variable clase para convertirlo en un problema de clasificacion
     ix_consumo_alto = mtcars.mpg >= 21 # crea vector; si cada elemento es mayor de 21 dela columa mtcars.mpg se guarda
     mtcars.mpg[ix_consumo_alto] = 1 # cuando es true
     mtcars.mpg[~ix_consumo_alto] = 0 # cuando no cumple
+    
     print("Este es el dataset sin normalizar")
     print(mtcars)
     print("\n\n")
+    
     # Ahora normalizamos los datos; loc ->selecciona (todas las filas mpg); apply->por cada columna aplica normalize(en c++ maps)
-    mtcars_normalizado = mtcars.loc[:, mtcars.columns != 'mpg'].apply(normalize, axis=1) # se le pasa el puntero ala funcion
-    # AÃ±adimos la clase a nuestro dataset normalizado
+    mtcars_normalizado = mtcars.loc[:, mtcars.columns != 'mpg'].apply(normalize, axis=1) # se le pasa el puntero a la funcion
+   
+    # Anadimos la clase a nuestro dataset normalizado
     mtcars_normalizado['mpg'] = mtcars['mpg']
     print("Este es el dataset normalizado")
     print(mtcars_normalizado)
     print("\n\n")
-    # Hacemos un split en train y test con un porcentaje del 0.75 Train
-    parte_train, parte_test = splitTrainTest(mtcars_normalizado, 0.75)
-    # Separamos las labels del Test. Es como si no nos las dieran!!
-    # tengo q predecir y luego comprobar. 
-    # distancia euclidea solo con las x 
     
-
- 
-    true_labels = parte_test.pop('mpg').tolist() # saco la columna mpg y la paso a lista
+    # Hacemos un split en train y test con un porcentaje del 0.75 Train
+    parte_test, parte_train = splitTrainTest(mtcars_normalizado, 0.75)
+    
+    # Separamos las labels del Test. Es como si no nos las dieran!!
+    testT = parte_test.loc[:, parte_test.columns != 'mpg'] # saco la columna mpg y la paso a lista
+    testR = parte_test.loc[:, parte_test.columns == 'mpg']
 
     acc = [] 
 
     # Predecimos el conjunto de test
 
-    for K in range (1,21):
-        pred_labels = []
-        for i in range(len(parte_test)):
-            pred_labels.append(knn(parte_test.iloc[i], parte_train, K))
-
-
-        parte_test['mpg'] = true_labels
-        parte_test['pred_mpg'] = pred_labels
-        print("Este es el dataset de test con las predicciones")
-        print(parte_test)
-        parte_test.pop('mpg')
-        parte_test.pop('pred_mpg')
-        
-        # Mostramos por pantalla el Accuracy por ejemplo
-        print("Accuracy: ", accuracy(true_labels, pred_labels))
-        acc.append(accuracy(true_labels, pred_labels))
+    true_labels = 0
+    predicted_labes = 0
     
+    print("CASOS DE TEST: \n")
+    
+    for i in range(len(testT)):
+        estimation = knn(testT.iloc[i,:], parte_train, 3)
+        predicted_labes +=1
+        print("Numero de Prueba: ", i , "Clase ESTIMADA -->", estimation, "Clase REAL --> ", testR.iloc[i,0], "\n")
+        if estimation == testR.iloc[i,0]:
+            true_labels +=1
+            
+    # hacemos un mini resumen de lo conseguido
+
+    print("Accuracy conseguido:", accuracy(true_labels, predicted_labes))
+            
+
 
     # Algun grafico? Libreria matplotlib.pyplot
-    plt.plot(range(1,21), acc)
+   # plt.plot(range(1,21), acc)
     return(0)
 
 # FUNCIONES de preprocesado
@@ -117,32 +119,50 @@ def knn(newx, data, K):
     Returns the prediction for newx
     Data is our frame
     """
-
-    data_list = data.values.tolist() # convertir a lista
-    newx_list = newx.values.tolist() # convertir a lista
-
+    trainSetT = data.loc[:, data.columns != 'mpg']
+    trainSetR = data.loc[:, data.columns == 'mpg']
+    
     distances = []
+    shortests_distances = []
 
+    # calculamos todas las distancias
+    for i in range(len(trainSetT)):
+        d = euclideanDistance2points(newx, trainSetT.iloc[i,:])
+        distances.append(d)
+        shortests_distances.append(d)
+        
+    shortests_distances.sort()
+    
+    # obtenemos los indices de los vecinos mas cercanos
+    indices = []
+    for v in range(K):
+        i = distances.index(shortests_distances[v])
+        indices.append(i)
+        # marcamos el elemento ya utilizado, para no repetirlo
+        distances[i] = -1
+        
+    # clases estimada
+    posibles_clases = []
+    for j in indices:
+        posibles_clases.append(trainSetR.iloc[i,0])
+        
+    #obtenemos las diferentes clases posibles
+    clases = [posibles_clases[0]]
+    for c in posibles_clases:
+        if c not in clases:
+            clases.append(c)
+            
+    # obtenemos la clase mayoritaria
+    clasem = clases[0]
+    mayoritaria = posibles_clases.count(clasem)
+    for c in clases:
+        n = posibles_clases.count(c)
+        # si esta es mayor que la mayoritaria calculada
+        if n > mayoritaria:
+            mayoritaria = n
+            clasem = c
 
-    for i in data_list:
-        distances.append(euclideanDistance2points(i, newx_list))
-
-    distances_order = sorted(distances)
-    neighbors = []
-
-    for i in range(0,K):
-        neighbors.append(distances_order.index(i))
-
-    labels = {}
-    for j in neighbors:
-        if str(data.loc[data.index[i]]['mpg']) in labels:
-            labels[str(data.loc[data.index[i]]['mpg'])] += 1
-        else:
-            labels[str(data.loc[data.index[i]]['mpg'])] = 1
-
-    newlabel = float(max(labels, key=labels.get)) 
-
-    return(newlabel)
+    return(clasem)
 
 def euclideanDistance2points(x,y):
     """
@@ -153,16 +173,11 @@ def euclideanDistance2points(x,y):
     s = 0
     for(i,j) in zip(x,y):
         s += (i-j)**2 
-    return (math.sqrt(s))
+    return (np.sqrt(s))
 
 # FUNCION accuracy
 def accuracy(true, pred):
-    cont = 0 
-    for (t,p) in zip(true, pred):
-        if t == p:
-            cont += 1
-
-    return (cont/len(true))
+    return (true/pred)
 
 if __name__ == '__main__':
     np.random.seed(25) #pone una semilla (como en weka)
