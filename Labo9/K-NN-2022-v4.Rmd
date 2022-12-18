@@ -1,0 +1,204 @@
+---
+title : "Machine Learning with R software"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Machine Learning with R software - Scripting
+
+Esta se trata de la primera practica donde trabajaremos sobre R mediante RStudio, para generar modelo mediante software de programacion.
+
+Trabajaremos con el dataset iris, el mismo que hemos utilizado en Weka en laboratorios anteriores. Para eso primero hay que importar el dataset indicandole la ruta de la carpeta donde se encuentra el fichero irir.csv.
+\
+```{r, eval=FALSE,echo=TRUE}
+setwd("D:/silvi/Documents/uni3D/cuatri1/MDD/Labo9")
+```
+
+Tras haber indicado donde esta el fichero, lo leemos.
+```{r}
+iris<-read.csv("iris.csv", header=TRUE, sep=",")
+```
+
+
+Para tener una idea general de nuestro fichero podemos usar los siguientes comandos:
+
+* summary() : Devolverá las estadísticas: la media, cuartiles, maxi-min, etc.\
+```{r}
+summary(iris)
+```
+\
+
+* names() : Devolverá el nombre de las columnas, variables predictoras.\
+```{r}
+names(iris)
+```
+\
+
+* head() : Devolverá los valores de cada columna para las primeras filas.\
+```{r}
+head(iris)
+```
+\
+
+Se reescribe el atributo variety, el cual es la clase. Este es de tipo caracter y queremos que se tipo nominal, factor. Cada cadena de caracteres es una variable nominal etiquetada. Diriamos que es un tipo de casting. Como hemos podido ver la ultima columna del dataset, es la clase del individio, el nombre de la variedad de flor, y es por supuesto una clase nominal.
+
+```{r}
+iris$variety <- as.factor(iris$variety) 
+table(iris$variety)
+```
+
+
+Podemos observar de que es un dataset bien balanceado. Hay los mismos casos para cada tipo, 50 exactamente.
+\
+
+# Libreria caret
+
+Para construir el modelo, vamos a utilizar la libreria caret de R. Esta contiene funciones para clasificacion y regresion. Para usarla debemos importarla, mediante el comando library().
+```{r}
+install.packages("caret", dependencies=T)
+```
+
+Luego, cargamos las funciones de la libreria caret().
+
+```{r results='hide'}
+library(caret)
+```
+
+# Contruimos el modelo
+
+Para empezar determinaremos una semilla inicial, en funcion de ella se crearan las particiones de train y de test para el modelo.
+```{r}
+set.seed("1234567890")
+```
+
+Tras esto, crearemos las particiones con el metodo createDataPartition().
+
+```{r}
+help("createDataPartition")
+trainSetIndexes <- createDataPartition(y=iris$variety,p=.66,list=FALSE)
+```
+
+Es importante entender que parámetros recoge esta función y como cambia la salida en función de ellos:
+
+* y       variable que contiene los elementos a particionar.
+* p       porcentaje de los casos que ira al subset de training.
+* list    si especificamos FALSE para este parámetro devolverá la particián en una matriz en lugar de en un vector.
+
+Usando la variable en la que guardamos la particion y su negada como indice para el dataset obtenemos las dos particiones.
+
+# ¿Que recoge el objeto "trainSetIndexes"?
+Se guardan la variable trainSet las muestras que pertecen a las del trainSetIndexes y en testSet todas menos las del trainSetIndex.
+
+```{r}
+trainSet <- iris[trainSetIndexes,]
+testSet <- iris[-trainSetIndexes,]
+```
+
+
+Numero de elementos del subconjunto trainSet: 
+```{r}
+nrow(trainSet)
+```
+
+Numero de elementos del subconjunto de TestSet:
+```{r}
+nrow(testSet)
+```
+
+Guardamos en la variable ctrl, los parametrso que tendra nuestro clasificador, un KNN.
+Controla que la particion del training. Basicamente, se realiza un 10-cross-validation.
+```{r}
+ctrl <- trainControl("cv", number=10)
+print(ctrl)
+```
+
+Parametros:
+* cv        metodo de clasificacion supervisada cross-validation
+* number    valor para el hiperparametro del método de clasificación (en el caso del CV el número de hojas), es decir, el numero de capas/particiones que se realizan en cada iteracion.
+
+# ¿Como codifica cuales son las predictoras, y cual la clase a predecir?
+
+La funcion train() es la que genera el clasificador juntando todas las piezas que hemos generado hasta ahora.
+```{r}
+KNNModel1 <- train(variety ~ ., data=trainSet, method="knn", tuneLength=5, trControl=ctrl, preProc=c("center","scale"))
+KNNModel1
+plot(KNNModel1)
+```
+
+La clase a predecir se marca en el primer parametro y separado por el caracter ~. Estos son los parametros mas importantes que toma:
+
+* method:       Especifica que metodo de clasificacion se va a usar para crear el clasificador
+* tuneLegth:    Se usa para especificar para cuantos parámetros diferentes se probará el modelo. En nuestro caso se probarán 5 valores diferentes para K y el modelo se quedará con el que tenga mejor accuracy.
+* trControl:    Este especifica que parametros queremos que tenga el clasificador, se usan los parametros ya especificados previamente.
+* preProc:      Expresa el pre procesado previo que se le realiza a nuestros datos antes de entrenar el clasificador.
+
+# ¿Que implica "escalar" una variable numerica, tal y como hemos pedido en las opciones de preproceso?
+
+
+
+
+
+Usando el subconjunto de test y el modelo generado podemos ver cual es su fiabilidad para conjunto de individuos nuevo.
+
+```{r}
+KNNPredict1 <- predict(KNNModel1, newdata=testSet)
+confusionMatrix(KNNPredict1, testSet$variety)
+```
+
+# ¿Se muestra la matriz de confusion en el "orden" que lo hace WEKA?
+
+Si nos fijamos la matriz de confusión que nos da R está traspuesta en comparación con la que nos devolvía Weka, es decir las columnas son las clases reales y las filas las clases predecidas.
+
+# ¿Que efecto tiene el parametro "tuneGrid"?
+
+Para un segundo ejemplo, en lugar de usar tuneLength para especificar el número de valores diferentes que tomará el parámetro del modelo, usaremos tuneGrid; con el que podremos elegir con que valores específicos se probará el clasificador.
+
+```{r}
+KNNModel2 <- train(variety ~ ., data=trainSet, method="knn", tuneGrid = expand.grid(k = c(1, 3, 5, 15, 19)), trControl=ctrl, preProc=c("center","scale"))
+KNNModel2
+plot(KNNModel2)
+```
+
+# En el proceso de aprendizaje: 
+
+# ¿Que diferencia principal hay entre el de "KNNModel1" y "KNNModel2"?
+
+Hemos probado el clasificador para los valores [1,3,5,15,19] y dado que el accuracy más alto se ha conseguido para K=3, como se puede ver en la gráfica, el modelo se ha decantado por ese valor.
+
+```{r}
+KNNPredict2 <- predict(KNNModel2, newdata=testSet)
+confusionMatrix(KNNPredict2, testSet$variety)
+```
+
+# Clasificadores Naive Bayes y árbol de clasificación
+
+Además del KNN, mediante el paquete caret y la función train se pueden aprender otros clasificadores. Vamos a hacer la prueba para el modelo Bayesiano Naïve Bayes y el árbol de clasificación.
+
+# Naive Bayes
+
+```{r}
+library(naivebayes)
+nb_grid <-   expand.grid(usekernel = c(TRUE, FALSE),
+                         laplace = c(0, 0.5, 1), 
+                         adjust = c(0.75, 1, 1.25, 1.5))
+naiveBayes <- train(variety ~ .,data=trainSet,method="naive_bayes",usepoisson=TRUE,tuneGrid=nb_grid)
+naiveBayes
+plot(naiveBayes)
+naiveBayesPredict <- predict(naiveBayes,newdata=testSet)
+confusionMatrix(naiveBayesPredict,testSet$variety)
+library(RWeka)
+```
+
+# Arboles de clasificacion
+```{r}
+decisionTree <- train(variety ~ .,data=trainSet,method="J48")
+decisionTree
+plot(decisionTree)
+decisionTreePredict <- predict(decisionTree,newdata=testSet)
+confusionMatrix(decisionTreePredict,testSet$variety)
+```
