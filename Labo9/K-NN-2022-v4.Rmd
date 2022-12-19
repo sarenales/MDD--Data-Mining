@@ -1,5 +1,6 @@
 ---
 title : "Machine Learning with R software"
+autor : Silvia Arenales
 output:
   pdf_document: default
   html_document: default
